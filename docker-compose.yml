@@ -1,0 +1,53 @@
+version: "3"
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - 4563-4599:4563-4599
+      - 8055:8080
+    environment:
+      - SERVICES=s3, sqs
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - '~/.localstack:/tmp/localstack'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+  express-api:
+    build: ./express-api
+    container_name: express-api
+    command: sh -c "npm install && npm run watch"
+    env_file: ./express-api/.env
+    working_dir: /root/express-api
+    ports:
+      - 3000:3000
+    volumes:
+      - ./express-api:/root/express-api:cached
+    depends_on: 
+      - mongodb   
+  vue-app:
+    build: ./vue-app
+    container_name: vue-app
+    command: sh -c "npm run serve"
+    env_file: ./vue-app/.env
+    working_dir: /root/vue-app
+    logging:
+      driver: none
+    ports:
+      - 8080:8080
+    volumes:
+      - ./vue-app:/root/vue-app
+  mongodb:
+    build: ./mongodb
+    container_name: 'mongodb'
+    environment:
+      - MONGO_INITDB_DATABASE=docker_demo
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+    volumes:
+      - ./mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./mongodb/data:/data/db
+    ports:
+      - 27017:27017
+  # postgres:
